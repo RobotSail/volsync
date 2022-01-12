@@ -41,6 +41,7 @@ import (
 	"github.com/backube/volsync/controllers/mover/rclone"
 	"github.com/backube/volsync/controllers/mover/restic"
 	"github.com/backube/volsync/controllers/mover/rsync"
+	"github.com/backube/volsync/controllers/mover/syncthing"
 	"github.com/backube/volsync/controllers/utils"
 	//+kubebuilder:scaffold:imports
 )
@@ -64,6 +65,7 @@ func main() {
 	rsync.Register()
 	rclone.Register()
 	restic.Register()
+	syncthing.Register()
 
 	var metricsAddr string
 	var enableLeaderElection bool

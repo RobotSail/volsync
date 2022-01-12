@@ -68,3 +68,8 @@ const (
 	SynchronizingReasonManual  string = "WaitingForManual"
 	SynchronizingReasonCleanup string = "CleaningUp"
 )
+
+type SyncthingNode struct {
+	Address  string `json:"address"`
+	DeviceID string `json:"deviceID"`
+}

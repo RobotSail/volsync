@@ -86,6 +86,7 @@ func (r *ReplicationSourceReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	}
 	result, err = reconcileSrcUsingCatalog(ctx, inst, r, logger)
 	if errors.Is(err, errNoMoverFound) {
+		// logger.Error(err, "No mover found")
 		if inst.Spec.External != nil {
 			// Not an internal method... we're done.
 			return ctrl.Result{}, nil

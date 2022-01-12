@@ -100,6 +100,9 @@ func (r *ReplicationSourceReconciler) countReplicationMethods(instance *volsyncv
 	if instance.Spec.Restic != nil {
 		numOfReplication++
 	}
+	if instance.Spec.Syncthing != nil {
+		numOfReplication++
+	}
 	if instance.Spec.External != nil {
 		numOfReplication++
 	}
@@ -119,6 +122,9 @@ func (r *ReplicationDestinationReconciler) countReplicationMethods(instance *vol
 		numOfReplication++
 	}
 	if instance.Spec.Restic != nil {
+		numOfReplication++
+	}
+	if instance.Spec.Syncthing != nil {
 		numOfReplication++
 	}
 	if instance.Spec.External != nil {

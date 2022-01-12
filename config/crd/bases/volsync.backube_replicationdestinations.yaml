@@ -271,6 +271,25 @@ spec:
                       VSC is used.
                     type: string
                 type: object
+              syncthing:
+                description: syncthing defines the configuration when using Syncthing-based
+                  replication.
+                properties:
+                  destinationPVC:
+                    type: string
+                  nodeList:
+                    items:
+                      properties:
+                        address:
+                          type: string
+                        deviceID:
+                          type: string
+                      required:
+                      - address
+                      - deviceID
+                      type: object
+                    type: array
+                type: object
               trigger:
                 description: trigger determines if/when the destination should attempt
                   to synchronize data with the source.
@@ -435,6 +454,25 @@ spec:
                       SSH keys will be generated and the appropriate keys for the
                       remote side will be placed here.
                     type: string
+                type: object
+              syncthing:
+                description: syncthing contains information regarding Syncthing-based
+                  replication.
+                properties:
+                  nodeList:
+                    description: NodeList is a list of the Syncthing nodes we are
+                      currently connected to.
+                    items:
+                      properties:
+                        address:
+                          type: string
+                        deviceID:
+                          type: string
+                      required:
+                      - address
+                      - deviceID
+                      type: object
+                    type: array
                 type: object
             type: object
         type: object

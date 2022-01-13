@@ -31,9 +31,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	b64 "encoding/base64"
-
 	"github.com/backube/volsync/api/v1alpha1"
+	"github.com/backube/volsync/controllers"
 	"github.com/backube/volsync/controllers/mover"
 	"github.com/backube/volsync/controllers/utils"
 )
@@ -103,11 +102,25 @@ func (m *Mover) Synchronize(ctx context.Context) (mover.Result, error) {
 		return mover.InProgress(), err
 	}
 
+	// get the API key from the syncthing-apikey secret
+	m.logger.Info("Getting API key")
+	apiKey, err := m.getAPIKey(ctx)
+	if err != nil {
+		return mover.InProgress(), err
+	}
+
+	headers := map[string]string{
+		"X-API-Key": apiKey,
+	}
+
+	_, err = controllers.JSONRequest("https://127.0.0.1:8384/rest/config", "GET", headers, nil, nil)
+	if err != nil {
+		return mover.InProgress(), err
+	}
 	// hello world example
 	// send an API request to the service exposing syncthing's API
-	k8sClient.
-	
-	
+	// k8sClient.
+
 	// On the source, just signal completion
 	return mover.Complete(), nil
 }
@@ -219,7 +232,7 @@ func (m *Mover) ensureSecretAPIKey(ctx context.Context) (*corev1.Secret, error) 
 			Type: corev1.SecretTypeOpaque,
 			Data: map[string][]byte{
 				// base64 encode an empty string
-				"apikey": []byte(b64.StdEncoding.EncodeToString([]byte("password123"))),
+				"apikey": []byte("password123"),
 			},
 		}
 		if err := m.client.Create(ctx, secret); err != nil {
@@ -463,4 +476,15 @@ func (m *Mover) Cleanup(ctx context.Context) (mover.Result, error) {
 		return mover.InProgress(), err
 	}
 	return mover.Complete(), nil
+}
+
+// get the API key
+func (m *Mover) getAPIKey(ctx context.Context) (string, error) {
+	// get the syncthing-apikey secret
+	secret := &corev1.Secret{}
+	err := m.client.Get(ctx, client.ObjectKey{Name: "syncthing-apikey", Namespace: m.owner.GetNamespace()}, secret)
+	if err != nil {
+		return "", err
+	}
+	return string(secret.Data["apikey"]), nil
 }

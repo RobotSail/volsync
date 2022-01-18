@@ -19,7 +19,9 @@ package syncthing
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"strconv"
 
 	"github.com/go-logr/logr"
 	snapv1 "github.com/kubernetes-csi/external-snapshotter/client/v4/apis/volumesnapshot/v1beta1"
@@ -102,24 +104,9 @@ func (m *Mover) Synchronize(ctx context.Context) (mover.Result, error) {
 		return mover.InProgress(), err
 	}
 
-	// get the API key from the syncthing-apikey secret
-	m.logger.Info("Getting API key")
-	apiKey, err := m.getAPIKey(ctx)
-	if err != nil {
+	if _, err := m.ensureIsConfigured(ctx); err != nil {
 		return mover.InProgress(), err
 	}
-
-	headers := map[string]string{
-		"X-API-Key": apiKey,
-	}
-
-	_, err = controllers.JSONRequest("https://127.0.0.1:8384/rest/config", "GET", headers, nil, nil)
-	if err != nil {
-		return mover.InProgress(), err
-	}
-	// hello world example
-	// send an API request to the service exposing syncthing's API
-	// k8sClient.
 
 	// On the source, just signal completion
 	return mover.Complete(), nil
@@ -487,4 +474,170 @@ func (m *Mover) getAPIKey(ctx context.Context) (string, error) {
 		return "", err
 	}
 	return string(secret.Data["apikey"]), nil
+}
+
+func (m *Mover) getSyncthingRequestHeaders(ctx context.Context) (map[string]string, error) {
+	// get the API key from the syncthing-apikey secret
+	m.logger.Info("Getting API key")
+	apiKey, err := m.getAPIKey(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	headers := map[string]string{
+		"X-API-Key":    apiKey,
+		"Content-Type": "application/json",
+	}
+	return headers, nil
+}
+
+func (m *Mover) getSyncthingConfig(ctx context.Context) (*SyncthingConfig, error) {
+	headers, err := m.getSyncthingRequestHeaders(ctx)
+	if err != nil {
+		return nil, err
+	}
+	responseBody := &SyncthingConfig{
+		Devices: []SyncthingDevice{},
+		Folders: []SyncthingFolder{},
+	}
+	data, err := controllers.JSONRequest("https://127.0.0.1:8384/rest/config", "GET", headers, nil)
+	if err != nil {
+		return nil, err
+	}
+	err = json.Unmarshal(data, responseBody)
+	// print out what we got back from golang
+	// m.logger.Info("Response from syncthing REST API", "response", responseBody)
+	return responseBody, err
+}
+
+func (m *Mover) getSyncthingSystemStatus(ctx context.Context) (*SystemStatus, error) {
+	headers, err := m.getSyncthingRequestHeaders(ctx)
+	if err != nil {
+		return nil, err
+	}
+	responseBody := &SystemStatus{}
+	data, err := controllers.JSONRequest("https://127.0.0.1:8384/rest/system/status", "GET", headers, nil)
+	if err != nil {
+		return nil, err
+	}
+	// unmarshal the data into the responseBody
+	err = json.Unmarshal(data, responseBody)
+	// m.logger.Info("Response from syncthing REST API", "response", responseBody)
+	return responseBody, err
+}
+
+func (m *Mover) updateSyncthingConfig(ctx context.Context, config *SyncthingConfig) (*SyncthingConfig, error) {
+	headers, err := m.getSyncthingRequestHeaders(ctx)
+	if err != nil {
+		return nil, err
+	}
+	// we only want to update the folders and devices
+	responseBody := &SyncthingConfig{
+		Devices: []SyncthingDevice{},
+		Folders: []SyncthingFolder{},
+	}
+	data, err := controllers.JSONRequest("https://127.0.0.1:8384/rest/config", "PUT", headers, config)
+	if err != nil {
+		return nil, err
+	}
+	err = json.Unmarshal(data, responseBody)
+	return responseBody, err
+}
+
+func (m *Mover) ensureIsConfigured(ctx context.Context) (mover.Result, error) {
+	config, err := m.getSyncthingConfig(ctx)
+	if err != nil {
+		return mover.InProgress(), err
+	}
+	m.logger.Info("Syncthing config", "config", config)
+	status, err := m.getSyncthingSystemStatus(ctx)
+	if err != nil {
+		m.logger.Error(err, "error getting syncthing system status")
+		return mover.InProgress(), err
+	}
+	m.logger.Info("my ID", "id", status.MyID)
+
+	// check if the syncthing is configured
+	if needsReconfigure(config.Devices, m.nodeList, status.MyID) {
+		m.logger.Info("Syncthing needs reconfiguration")
+		// create a new list of devices based on the nodelist
+
+		newDevices := []SyncthingDevice{}
+		for _, device := range config.Devices {
+			if device.DeviceID == status.MyID {
+				newDevices = append(newDevices, device)
+				break
+			}
+		}
+
+		for i, device := range m.nodeList {
+			if device.DeviceID == status.MyID {
+				continue
+			}
+			newDevices = append(newDevices, SyncthingDevice{
+				DeviceID:  device.DeviceID,
+				Addresses: []string{device.Address},
+				Name:      "connected device " + strconv.Itoa(i),
+			})
+		}
+
+		// replace the current list of devices with the new one
+		config.Devices = newDevices
+		// share the current folder(s) with the new devices
+		var newFolders = []SyncthingFolder{}
+		for _, folder := range config.Folders {
+			for _, device := range config.Devices {
+				folder.Devices = append(folder.Devices, FolderDeviceConfiguration{
+					DeviceID: device.DeviceID,
+				})
+			}
+			newFolders = append(newFolders, folder)
+		}
+
+		// now we can PUT the new config to syncthing
+		config.Folders = newFolders
+		m.logger.Info("Updated Syncthing config for update", "config", config)
+		if config, err = m.updateSyncthingConfig(ctx, config); err != nil {
+			m.logger.Error(err, "error updating syncthing config")
+			return mover.InProgress(), err
+		}
+		m.logger.Info("Syncthing config after configuration", "config", config)
+	}
+
+	return mover.Complete(), nil
+}
+
+func needsReconfigure(connectedDevs []SyncthingDevice, nodeList []*v1alpha1.SyncthingNode, selfID string) bool {
+	// check if the syncthing nodelist diverges from the current syncthing devices
+	var newDevices map[string]*v1alpha1.SyncthingNode = map[string]*v1alpha1.SyncthingNode{
+		selfID: {
+			DeviceID: selfID,
+			Address:  "",
+		},
+	}
+	for _, device := range nodeList {
+		newDevices[device.DeviceID] = device
+	}
+
+	// create a map for current devices
+	var currentDevs map[string]*v1alpha1.SyncthingNode = map[string]*v1alpha1.SyncthingNode{}
+	for _, device := range connectedDevs {
+		currentDevs[device.DeviceID] = &v1alpha1.SyncthingNode{
+			DeviceID: device.DeviceID,
+			Address:  device.Addresses[0],
+		}
+	}
+
+	// check if the syncthing nodelist diverges from the current syncthing devices
+	for _, device := range newDevices {
+		if _, ok := currentDevs[device.DeviceID]; !ok {
+			return true
+		}
+	}
+	for _, device := range currentDevs {
+		if _, ok := newDevices[device.DeviceID]; !ok {
+			return true
+		}
+	}
+	return false
 }

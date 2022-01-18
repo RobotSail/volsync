@@ -1,3 +1,4 @@
+//nolint:revive
 /*
 Copyright 2021 The VolSync authors.
 
@@ -18,9 +19,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 package syncthing
 
 // syncthing config type
-
+// nolint:revive
 type SyncthingDevice struct {
 	DeviceID                 string   `json:"deviceID"`
+	Name                     string   `json:"name"`
 	Addresses                []string `json:"addresses"`
 	Compression              string   `json:"compression"`
 	CertName                 string   `json:"certName"`
@@ -38,11 +40,13 @@ type SyncthingDevice struct {
 	RemoteGUIPort            int      `json:"remoteGUIPort"`
 }
 
+//nolint:revive
 type SyncthingSize struct {
 	Value int    `json:"value"`
 	Unit  string `json:"unit"`
 }
 
+//nolint:revive
 type SyncthingVersioning struct {
 	Type             string            `json:"type"`
 	Params           map[string]string `json:"params"`
@@ -51,28 +55,30 @@ type SyncthingVersioning struct {
 	FsType           string            `json:"fsType"`
 }
 
+//nolint:revive
 type SyncthingFolder struct {
-	ID                    string              `json:"id"`
-	Label                 string              `json:"label"`
-	FilesystemType        string              `json:"filesystemType"`
-	Path                  string              `json:"path"`
-	Type                  string              `json:"type"`
-	Devices               []SyncthingDevice   `json:"devices"`
-	RescanIntervalS       int                 `json:"rescanIntervalS"`
-	FsWatcherEnabled      bool                `json:"fsWatcherEnabled"`
-	FsWatcherDelayS       int                 `json:"fsWatcherDelayS"`
-	IgnorePerms           bool                `json:"ignorePerms"`
-	AutoNormalize         bool                `json:"autoNormalize"`
-	MinDiskFree           SyncthingSize       `json:"minDiskFree"`
-	Versioning            SyncthingVersioning `json:"versioning"`
-	Copiers               int                 `json:"copiers"`
-	PullerMaxPendingKiB   int                 `json:"pullerMaxPendingKiB"`
-	Hashers               int                 `json:"hashers"`
-	Order                 string              `json:"order"`
-	IgnoreDelete          bool                `json:"ignoreDelete"`
-	ScanProgressIntervalS int                 `json:"scanProgressIntervalS"`
+	ID                    string                      `json:"id"`
+	Label                 string                      `json:"label"`
+	FilesystemType        string                      `json:"filesystemType"`
+	Path                  string                      `json:"path"`
+	Type                  string                      `json:"type"`
+	Devices               []FolderDeviceConfiguration `json:"devices"`
+	RescanIntervalS       int                         `json:"rescanIntervalS"`
+	FsWatcherEnabled      bool                        `json:"fsWatcherEnabled"`
+	FsWatcherDelayS       int                         `json:"fsWatcherDelayS"`
+	IgnorePerms           bool                        `json:"ignorePerms"`
+	AutoNormalize         bool                        `json:"autoNormalize"`
+	MinDiskFree           SyncthingSize               `json:"minDiskFree"`
+	Versioning            SyncthingVersioning         `json:"versioning"`
+	Copiers               int                         `json:"copiers"`
+	PullerMaxPendingKiB   int                         `json:"pullerMaxPendingKiB"`
+	Hashers               int                         `json:"hashers"`
+	Order                 string                      `json:"order"`
+	IgnoreDelete          bool                        `json:"ignoreDelete"`
+	ScanProgressIntervalS int                         `json:"scanProgressIntervalS"`
 }
 
+//nolint:revive
 type SyncthingOptions struct {
 	ListenAddresses         []string      `json:"listenAddresses"`
 	GlobalAnnServers        []string      `json:"globalAnnServers"`
@@ -130,12 +136,92 @@ type SyncthingOptions struct {
 	ReconnectBackoffMin     int           `json:"reconnectBackoffMin"`
 }
 
+type FolderDeviceConfiguration struct {
+	DeviceID           string `json:"deviceID"`
+	IntroducedBy       string `json:"introducedBy"`
+	EncryptionPassword string `json:"encryptionPassword"`
+}
+
+//nolint:revive
 type SyncthingConfig struct {
-	Version              string            `json:"version"`
+	Version              int               `json:"version"`
 	Folders              []SyncthingFolder `json:"folders"`
 	Devices              []SyncthingDevice `json:"devices"`
 	Options              SyncthingOptions  `json:"options"`
 	Device               SyncthingDevice   `json:"device"`
 	RemoteIgnoredDevices []string          `json:"remoteIgnoredDevices"`
 	Defaults             SyncthingFolder   `json:"defaults"`
+}
+
+/*******************************************************************************
+ * Syncthing System Status
+ * Example of a response from GET /rest/system/status:
+ {
+  "alloc": 21476992,
+  "connectionServiceStatus": {
+    "quic://0.0.0.0:22000": {
+      "error": null,
+      "lanAddresses": [
+        "quic://0.0.0.0:22000",
+        "quic://10.244.0.14:22000"
+      ],
+      "wanAddresses": [
+        "quic://0.0.0.0:22000",
+        "quic://108.20.160.75:22000"
+      ]
+    },
+    "tcp://0.0.0.0:22000": {
+      "error": null,
+      "lanAddresses": [
+        "tcp://0.0.0.0:22000",
+        "tcp://10.244.0.14:22000"
+      ],
+      "wanAddresses": [
+        "tcp://0.0.0.0:0",
+        "tcp://0.0.0.0:22000"
+      ]
+    }
+  },
+  "cpuPercent": 0,
+  "goroutines": 59,
+  "guiAddressOverridden": false,
+  "guiAddressUsed": "[::]:8384",
+  "lastDialStatus": {},
+  "myID": "7NT7QDT-4ZHKSOP-MYCPM6L-NWUMDSS-7QY2Z5E-GTNIG4S-UE6NLM2-G4WYTA3",
+  "pathSeparator": "/",
+  "startTime": "2022-01-13T21:09:39Z",
+  "sys": 40988696,
+  "tilde": "/root",
+  "uptime": 69126,
+  "urVersionMax": 3
+}
+ ******************************************************************************/
+
+type ListenerStatusEntry struct {
+	Error        *string  `json:"error"`
+	LANAddresses []string `json:"lanAddresses"`
+	WANAddresses []string `json:"wanAddresses"`
+}
+
+type DialStatus struct {
+	When  string  `json:"when"`
+	Error *string `json:"error"`
+	OK    bool    `json:"ok"`
+}
+
+type SystemStatus struct {
+	Alloc                   int                            `json:"alloc"`
+	ConnectionServiceStatus map[string]ListenerStatusEntry `json:"connectionServiceStatus"`
+	CPUPercent              int                            `json:"cpuPercent"`
+	Goroutines              int                            `json:"goroutines"`
+	GUIAddressOverridden    bool                           `json:"guiAddressOverridden"`
+	GUIAddressUsed          string                         `json:"guiAddressUsed"`
+	LastDialStatus          map[string]DialStatus          `json:"lastDialStatus"`
+	MyID                    string                         `json:"myID"`
+	PathSeparator           string                         `json:"pathSeparator"`
+	StartTime               string                         `json:"startTime"`
+	Sys                     int                            `json:"sys"`
+	Tilde                   string                         `json:"tilde"`
+	Uptime                  int                            `json:"uptime"`
+	URVersionMax            int                            `json:"urVersionMax"`
 }

@@ -21,7 +21,6 @@ import (
 	"bytes"
 	"crypto/tls"
 	"encoding/json"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -141,13 +140,12 @@ func (r *ReplicationDestinationReconciler) countReplicationMethods(instance *vol
 	return numOfReplication
 }
 
-// get completion from openai
 //nolint:deadcode,funlen,lll,unparam,unused
-func JSONRequest(url string, method string, headers map[string]string, requestBody interface{}, responseBody interface{}) (string, error) {
+func JSONRequest(url string, method string, headers map[string]string, requestBody interface{}) ([]byte, error) {
 	// marshal above json body into a string
 	jsonBody, err := json.Marshal(requestBody)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	// tostring the json body
 	body := io.Reader(bytes.NewReader(jsonBody))
@@ -166,21 +164,14 @@ func JSONRequest(url string, method string, headers map[string]string, requestBo
 
 	// make an HTTPS POST request
 	if err != nil {
-		return "nil", err
+		return nil, err
 	}
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return "nil", err
+		return nil, err
 	}
 
-	// read the body with answer
-	data, _ := ioutil.ReadAll(resp.Body)
-	// print out data as string
-	fmt.Println("request data: " + string(data))
-
-	err = json.Unmarshal(data, &responseBody)
-
-	// return the answer
-	return "responseBody", err
+	// read body into response
+	return ioutil.ReadAll(resp.Body)
 }

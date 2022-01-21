@@ -22,9 +22,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/go-logr/logr"
-	snapv1 "github.com/kubernetes-csi/external-snapshotter/client/v4/apis/volumesnapshot/v1beta1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -54,21 +54,13 @@ type Mover struct {
 	paused      bool
 	dataPVCName *string
 	nodeList    []*v1alpha1.SyncthingNode
-	// Source-only fields
-	sourceStatus *v1alpha1.ReplicationSourceSyncthingStatus
-	// Destination-only fields
-	destinationStatus *v1alpha1.ReplicationDestinationSyncthingStatus
 }
 
 var _ mover.Mover = &Mover{}
 
 // All object types that are temporary/per-iteration should be listed here. The
 // individual objects to be cleaned up must also be marked.
-var cleanupTypes = []client.Object{
-	&corev1.PersistentVolumeClaim{},
-	&snapv1.VolumeSnapshot{},
-	&batchv1.Job{},
-}
+var cleanupTypes = []client.Object{}
 
 func (m *Mover) Name() string { return "syncthing" }
 
@@ -79,53 +71,42 @@ func (m *Mover) Name() string { return "syncthing" }
 // - Job/Pod running the syncthing mover image
 // - Service exposing the syncthing REST API for us to make requests to
 func (m *Mover) Synchronize(ctx context.Context) (mover.Result, error) {
+	var err error
 	// ensure the data pvc exists
-	if _, err := m.ensureDataPVC(ctx); err != nil {
+	if _, err = m.ensureDataPVC(ctx); err != nil {
 		return mover.InProgress(), err
 	}
 
 	// create PVC for config data
-	if _, err := m.ensureConfigPVC(ctx); err != nil {
+	if _, err = m.ensureConfigPVC(ctx); err != nil {
 		return mover.InProgress(), err
 	}
 
 	// ensure the secret exists
-	if _, err := m.ensureSecretAPIKey(ctx); err != nil {
+	if _, err = m.ensureSecretAPIKey(ctx); err != nil {
 		return mover.InProgress(), err
 	}
 
 	// ensure the job exists
-	if _, err := m.ensureJob(ctx); err != nil {
+	if _, err = m.ensureJob(ctx); err != nil {
 		return mover.InProgress(), err
 	}
 
 	// create the service for the syncthing REST API
-	if _, err := m.ensureService(ctx); err != nil {
+	if _, err = m.ensureService(ctx); err != nil {
 		return mover.InProgress(), err
 	}
 
-	if _, err := m.ensureIsConfigured(ctx); err != nil {
+	if _, err = m.ensureIsConfigured(ctx); err != nil {
 		return mover.InProgress(), err
 	}
+	var retryAfter = 20 * time.Second
+	m.logger.Info("Synchronization complete", "requeue after", retryAfter)
 
-	// On the source, just signal completion
-	return mover.Complete(), nil
+	return mover.RetryAfter(retryAfter), nil
 }
 
 func (m *Mover) ensureConfigPVC(ctx context.Context) (*corev1.PersistentVolumeClaim, error) {
-	/*
-		# create the PVC syncthing-config with a small footprint
-		apiVersion: v1
-		kind: PersistentVolumeClaim
-		metadata:
-			name: syncthing-config
-		spec:
-			accessModes:
-			- ReadWriteOnce
-			resources:
-				requests:
-					storage: 1Gi
-	*/
 	configPVC := &corev1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "syncthing-config",
@@ -234,56 +215,6 @@ func (m *Mover) ensureSecretAPIKey(ctx context.Context) (*corev1.Secret, error) 
 
 //nolint:funlen
 func (m *Mover) ensureJob(ctx context.Context) (*batchv1.Job, error) {
-	/*
-				Sample of the job as a yaml
-				apiVersion: batch/v1
-		kind: Job
-		metadata:
-		  name: syncthing
-		spec:
-		  ttlSecondsAfterFinished: 100
-		  template:
-		    spec:
-		      restartPolicy: Never
-		      containers:
-		      - name: syncthing
-		        image: "quay.io/backube/volsync-mover-syncthing"
-		        command: ["/entry.sh"]
-		        args:
-		        - run
-		        env:
-		        - name: SYNCTHING_CONFIG_DIR
-		          value: "/config"
-		        - name: SYNCTHING_DATA_DIR
-		          value: "/data"
-		        - name: STGUIAPIKEY
-		          valueFrom:
-		            secretKeyRef:
-		              name: syncthing-apikey
-		              key: apikey
-		        imagePullPolicy: Always
-		        ports:
-		        - containerPort: 8384
-		        - containerPort: 22000
-		        volumeMounts:
-		        - name: syncthing-config
-		          mountPath: /config
-		        - name: synced-volume  # hook this up with whatever PVC you want to sync
-		          mountPath: /data
-		        resources:
-		          limits:
-		            cpu: 100m
-		            memory: 1Gi
-		      volumes:
-		      - name: syncthing-config
-		        persistentVolumeClaim:
-		          claimName: syncthing-config
-		      # the volume we want to sync
-		      - name: synced-volume
-		        persistentVolumeClaim:
-		          # enter the PVC name here
-		          claimName: dokuwiki-pvc
-	*/
 	// return successfully if the job exists, try to create it otherwise
 	job := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
@@ -297,7 +228,6 @@ func (m *Mover) ensureJob(ctx context.Context) (*batchv1.Job, error) {
 	err := m.client.Get(ctx, client.ObjectKeyFromObject(job), job)
 	if err == nil {
 		// job already exists
-		m.logger.Info("Job already exists: " + job.Name)
 		return job, nil
 	}
 	if !errors.IsNotFound(err) {
@@ -409,19 +339,6 @@ func (m *Mover) ensureJob(ctx context.Context) (*batchv1.Job, error) {
 }
 
 func (m *Mover) ensureService(ctx context.Context) (*corev1.Service, error) {
-	/* Service is in the following form:
-	apiVersion: v1
-	kind: Service
-	metadata:
-		name: syncthing-svc
-	spec:
-		selector:
-			app: syncthing
-		ports:
-		- port: 8384
-			targetPort: 8384
-			protocol: TCP
-	*/
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "syncthing",

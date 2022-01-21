@@ -62,14 +62,13 @@ func (rb *Builder) FromSource(client client.Client, logger logr.Logger,
 	}
 
 	return &Mover{
-		client:       client,
-		logger:       logger.WithValues("method", "Syncthing"),
-		owner:        source,
-		nodeList:     source.Spec.Syncthing.NodeList,
-		isSource:     true,
-		paused:       source.Spec.Paused,
-		dataPVCName:  &source.Spec.SourcePVC,
-		sourceStatus: source.Status.Syncthing,
+		client:      client,
+		logger:      logger.WithValues("method", "Syncthing"),
+		owner:       source,
+		nodeList:    source.Spec.Syncthing.NodeList,
+		isSource:    true,
+		paused:      source.Spec.Paused,
+		dataPVCName: &source.Spec.SourcePVC,
 	}, nil
 }
 
@@ -81,13 +80,12 @@ func (rb *Builder) FromDestination(client client.Client, logger logr.Logger,
 	}
 
 	return &Mover{
-		client:            client,
-		logger:            logger.WithValues("method", "Syncthing"),
-		owner:             destination,
-		nodeList:          destination.Spec.Syncthing.NodeList,
-		isSource:          false,
-		paused:            destination.Spec.Paused,
-		dataPVCName:       destination.Spec.Syncthing.DestinationPVC,
-		destinationStatus: destination.Status.Syncthing,
+		client:      client,
+		logger:      logger.WithValues("method", "Syncthing"),
+		owner:       destination,
+		nodeList:    destination.Spec.Syncthing.NodeList,
+		isSource:    false,
+		paused:      destination.Spec.Paused,
+		dataPVCName: destination.Spec.Syncthing.DestinationPVC,
 	}, nil
 }

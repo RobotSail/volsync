@@ -275,7 +275,34 @@ spec:
                 description: syncthing defines the configuration when using Syncthing-based
                   replication.
                 properties:
+                  accessModes:
+                    description: accessModes specifies the access modes for the destination
+                      volume.
+                    items:
+                      type: string
+                    minItems: 1
+                    type: array
+                  capacity:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: capacity is the size of the destination volume to
+                      create.
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
+                  copyMethod:
+                    description: copyMethod describes how a point-in-time (PiT) image
+                      of the destination volume should be created.
+                    enum:
+                    - Direct
+                    - None
+                    - Clone
+                    - Snapshot
+                    type: string
                   destinationPVC:
+                    description: destinationPVC is a PVC to use as the transfer destination
+                      instead of automatically provisioning one. Either this field
+                      or both capacity and accessModes must be specified.
                     type: string
                   nodeList:
                     items:
@@ -289,6 +316,16 @@ spec:
                       - deviceID
                       type: object
                     type: array
+                  storageClassName:
+                    description: storageClassName can be used to specify the StorageClass
+                      of the destination volume. If not set, the default StorageClass
+                      will be used.
+                    type: string
+                  volumeSnapshotClassName:
+                    description: volumeSnapshotClassName can be used to specify the
+                      VSC to be used if copyMethod is Snapshot. If not set, the default
+                      VSC is used.
+                    type: string
                 type: object
               trigger:
                 description: trigger determines if/when the destination should attempt

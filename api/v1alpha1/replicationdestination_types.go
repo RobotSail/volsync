@@ -124,8 +124,8 @@ type ReplicationDestinationRcloneSpec struct {
 
 // define the Syncthing field
 type ReplicationDestinationSyncthingSpec struct {
-	DestinationPVC *string          `json:"destinationPVC,omitempty"`
-	NodeList       []*SyncthingNode `json:"nodeList,omitempty"`
+	ReplicationDestinationVolumeOptions `json:",inline"`
+	NodeList                            []*SyncthingNode `json:"nodeList,omitempty"`
 }
 
 // ReplicationDestinationExternalSpec defines the configuration when using an

@@ -18,6 +18,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 package controllers
 
 import (
+	"bytes"
+	"crypto/tls"
+	"encoding/json"
+	"io"
+	"io/ioutil"
+	"net/http"
 	"time"
 
 	volsyncv1alpha1 "github.com/backube/volsync/api/v1alpha1"
@@ -100,6 +106,9 @@ func (r *ReplicationSourceReconciler) countReplicationMethods(instance *volsyncv
 	if instance.Spec.Restic != nil {
 		numOfReplication++
 	}
+	if instance.Spec.Syncthing != nil {
+		numOfReplication++
+	}
 	if instance.Spec.External != nil {
 		numOfReplication++
 	}
@@ -126,4 +135,40 @@ func (r *ReplicationDestinationReconciler) countReplicationMethods(instance *vol
 	}
 	logger.Info("Counting over ", "Number of Replication Methods: ", numOfReplication)
 	return numOfReplication
+}
+
+//nolint:deadcode,funlen,lll,unparam,unused
+func JSONRequest(url string, method string, headers map[string]string, requestBody interface{}) ([]byte, error) {
+	// marshal above json body into a string
+	jsonBody, err := json.Marshal(requestBody)
+	if err != nil {
+		return nil, err
+	}
+	// tostring the json body
+	body := io.Reader(bytes.NewReader(jsonBody))
+
+	tr := &http.Transport{
+		//nolint:gosec
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	req, err := http.NewRequest(method, url, body)
+	client := &http.Client{Transport: tr}
+	// req, err := http.NewRequest(method, url, body)
+
+	for key, value := range headers {
+		req.Header.Set(key, value)
+	}
+
+	// make an HTTPS POST request
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	// read body into response
+	return ioutil.ReadAll(resp.Body)
 }

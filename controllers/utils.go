@@ -152,7 +152,10 @@ func JSONRequest(url string, method string, headers map[string]string, requestBo
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
 	req, err := http.NewRequest(method, url, body)
-	client := &http.Client{Transport: tr}
+	client := &http.Client{
+		Transport: tr,
+		Timeout:   time.Second * 5,
+	}
 	// req, err := http.NewRequest(method, url, body)
 
 	for key, value := range headers {

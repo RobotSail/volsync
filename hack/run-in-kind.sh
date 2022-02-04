@@ -11,6 +11,7 @@ make docker-build cli
 make -C mover-rclone image
 make -C mover-restic image
 make -C mover-rsync image
+make -C mover-syncthing image
 
 # Load the images into kind
 # We are using a special tag that should never be pushed to a repo so that it's
@@ -36,6 +37,7 @@ helm upgrade --install --create-namespace -n volsync-system \
     --set rclone.tag="${KIND_TAG}" \
     --set restic.tag="${KIND_TAG}" \
     --set rsync.tag="${KIND_TAG}" \
+		--set syncthing.tag="${KIND_TAG}" \
     --set metrics.disableAuth=true \
     --wait --timeout=300s \
     volsync ./helm/volsync

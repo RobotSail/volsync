@@ -286,7 +286,7 @@ jobs:
           MINIO_NAMESPACE=minio-tls MINIO_USE_TLS=1 ./hack/run-minio.sh
 
       - name: Load operator container artifact
-        uses: actions/download-artifact@fb598a63ae348fa914e94cd0ff38f362e927b741
+        uses: actions/download-artifact@6b208ae046db98c579e8a3aa621ab581ff575935
         with:
           name: volsync-operator
           path: /tmp
@@ -299,7 +299,7 @@ jobs:
           kind load docker-image "${OPERATOR_IMAGE}:ci-build"
 
       - name: Load rclone container artifact
-        uses: actions/download-artifact@fb598a63ae348fa914e94cd0ff38f362e927b741
+        uses: actions/download-artifact@6b208ae046db98c579e8a3aa621ab581ff575935
         with:
           name: volsync-mover-rclone-container
           path: /tmp
@@ -312,7 +312,7 @@ jobs:
           kind load docker-image "${RCLONE_IMAGE}:ci-build"
 
       - name: Load restic container artifact
-        uses: actions/download-artifact@fb598a63ae348fa914e94cd0ff38f362e927b741
+        uses: actions/download-artifact@6b208ae046db98c579e8a3aa621ab581ff575935
         with:
           name: volsync-mover-restic-container
           path: /tmp
@@ -325,7 +325,7 @@ jobs:
           kind load docker-image "${RESTIC_IMAGE}:ci-build"
 
       - name: Load rsync container artifact
-        uses: actions/download-artifact@fb598a63ae348fa914e94cd0ff38f362e927b741
+        uses: actions/download-artifact@6b208ae046db98c579e8a3aa621ab581ff575935
         with:
           name: volsync-mover-rsync-container
           path: /tmp
@@ -338,7 +338,7 @@ jobs:
           kind load docker-image "${RSYNC_IMAGE}:ci-build"
 
       - name: Load syncthing container artifact
-        uses: actions/download-artifact@fb598a63ae348fa914e94cd0ff38f362e927b741
+        uses: actions/download-artifact@6b208ae046db98c579e8a3aa621ab581ff575935
         with:
           name: volsync-mover-syncthing-container
           path: /tmp
@@ -362,7 +362,7 @@ jobs:
               volsync-ghaction ./helm/volsync
 
       - name: Load cli artifact
-        uses: actions/download-artifact@fb598a63ae348fa914e94cd0ff38f362e927b741
+        uses: actions/download-artifact@6b208ae046db98c579e8a3aa621ab581ff575935
         with:
           name: kubectl-volsync
           path: bin

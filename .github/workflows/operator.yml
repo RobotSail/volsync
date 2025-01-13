@@ -92,7 +92,7 @@ jobs:
         run: docker save -o /tmp/image.tar ${OPERATOR_IMAGE}
 
       - name: Save container as artifact
-        uses: actions/upload-artifact@3cea5372237819ed00197afe530f5a7ea3e805c8
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08
         with:
           name: volsync-operator
           path: /tmp/image.tar
@@ -112,7 +112,7 @@ jobs:
         run: docker save -o /tmp/image.tar ${RCLONE_IMAGE}
 
       - name: Save container as artifact
-        uses: actions/upload-artifact@3cea5372237819ed00197afe530f5a7ea3e805c8
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08
         with:
           name: volsync-mover-rclone-container
           path: /tmp/image.tar
@@ -132,7 +132,7 @@ jobs:
         run: docker save -o /tmp/image.tar ${RESTIC_IMAGE}
 
       - name: Save container as artifact
-        uses: actions/upload-artifact@3cea5372237819ed00197afe530f5a7ea3e805c8
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08
         with:
           name: volsync-mover-restic-container
           path: /tmp/image.tar
@@ -152,7 +152,7 @@ jobs:
         run: docker save -o /tmp/image.tar ${RSYNC_IMAGE}
 
       - name: Save container as artifact
-        uses: actions/upload-artifact@3cea5372237819ed00197afe530f5a7ea3e805c8
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08
         with:
           name: volsync-mover-rsync-container
           path: /tmp/image.tar
@@ -172,7 +172,7 @@ jobs:
         run: docker save -o /tmp/image.tar ${SYNCTHING_IMAGE}
 
       - name: Save container as artifact
-        uses: actions/upload-artifact@3cea5372237819ed00197afe530f5a7ea3e805c8
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08
         with:
           name: volsync-mover-syncthing-container
           path: /tmp/image.tar
@@ -220,7 +220,7 @@ jobs:
         run: make test-krew
 
       - name: Save cli as artifact
-        uses: actions/upload-artifact@3cea5372237819ed00197afe530f5a7ea3e805c8
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08
         with:
           name: kubectl-volsync
           path: bin/kubectl-volsync

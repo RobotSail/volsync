@@ -71,7 +71,7 @@ jobs:
         run: make test
 
       - name: Upload test coverage
-        uses: codecov/codecov-action@81cd2dc8148241f03f5839d295e000b8f761e378
+        uses: codecov/codecov-action@0565863a31f2c772f9f0395002a31e3f06189574
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           file: ./cover.out

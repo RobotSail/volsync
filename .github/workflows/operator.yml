@@ -374,7 +374,7 @@ jobs:
         run: kubectl -n minio wait --for=condition=Available --timeout=300s deploy/minio
 
       - name: Setup Python
-        uses: actions/setup-python@b55428b1882923874294fa556849718a1d7f2ca5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
           python-version: '3.10'
           cache: 'pipenv'
